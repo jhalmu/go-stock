@@ -1,0 +1,182 @@
+package main
+
+import "fmt"
+import "strconv"
+
+templ indexPage() {
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dividend Charts</title>
+    <script src="https://unpkg.com/htmx.org@1.9.6"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        lavender: {
+                            light: '#E6E6FA',
+                            DEFAULT: '#9370DB',
+                            dark: '#8A2BE2',
+                        },
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+
+<body class="bg-lavender-light min-h-screen flex items-center justify-center">
+    <div class="bg-white bg-opacity-80 p-8 rounded-lg shadow-md w-full max-w-4xl">
+        <h1 class="text-3xl font-bold mb-6 text-center text-lavender-dark">Dividend Charts</h1>
+
+        <div id="charts" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+                <h2 class="text-xl font-semibold mb-2 text-lavender">Dividend Trends</h2>
+                <canvas id="trendChart"></canvas>
+            </div>
+            <div>
+                <h2 class="text-xl font-semibold mb-2 text-lavender">Dividend Comparison</h2>
+                <canvas id="comparisonChart"></canvas>
+            </div>
+        </div>
+
+        <div>
+            <h2 class="text-xl font-semibold mb-2 text-lavender">Dividend Data</h2>
+            <div id="dividendData" class="overflow-x-auto">
+                <table class="min-w-full bg-white bg-opacity-50">
+                    <thead>
+                        <tr>
+                            <th class="px-4 py-2 bg-lavender text-white">Symbol</th>
+                            <th class="px-4 py-2 bg-lavender text-white">Year</th>
+                            <th class="px-4 py-2 bg-lavender text-white">Dividend</th>
+                        </tr>
+                    </thead>
+                    <tbody hx-get="/api/dividends" hx-trigger="load" hx-swap="innerHTML">
+                        <tr>
+                            <td colspan="3" class="text-center py-4">Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.body.addEventListener('htmx:afterSwap', function (event)
+        {
+            if (event.detail.target.tagName === 'TBODY')
+            {
+                const data = JSON.parse(event.detail.xhr.response);
+                updateCharts(data);
+            }
+        });
+
+        function updateCharts(data)
+        {
+            const symbols = [...new Set(data.map(item => item.Symbol))];
+            const years = [...new Set(data.map(item => item.Year))];
+
+            // Trend Chart
+            const trendCtx = document.getElementById('trendChart').getContext('2d');
+            new Chart(trendCtx, {
+                type: 'line',
+                data: {
+                    labels: years,
+                    datasets: symbols.map(symbol => ({
+                        label: symbol,
+                        data: data.filter(item => item.Symbol === symbol).map(item => item.Dividend),
+                        borderColor: getRandomColor(),
+                        fill: false
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    title: {
+                        display: true,
+                        text: 'Dividend Trends'
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Dividend ($)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // Comparison Chart
+            const comparisonCtx = document.getElementById('comparisonChart').getContext('2d');
+            new Chart(comparisonCtx, {
+                type: 'bar',
+                data: {
+                    labels: symbols,
+                    datasets: years.map(year => ({
+                        label: year.toString(),
+                        data: symbols.map(symbol =>
+                        {
+                            const item = data.find(d => d.Symbol === symbol && d.Year === year);
+                            return item ? item.Dividend : 0;
+                        }),
+                        backgroundColor: getRandomColor(0.6)
+                    }))
+                },
+                options: {
+                    responsive: true,
+                    title: {
+                        display: true,
+                        text: 'Dividend Comparison'
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Dividend ($)'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+
+        function getRandomColor(opacity = 1)
+        {
+            const r = Math.floor(Math.random() * 256);
+            const g = Math.floor(Math.random() * 256);
+            const b = Math.floor(Math.random() * 256);
+            return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+        }
+    </script>
+</body>
+
+</html>
+}
+
+templ dividendRows(data []DividendData) {
+for _, item := range data {
+<tr class="hover:bg-lavender-light">
+    <td class="border px-4 py-2">{ item.Symbol }</td>
+    <td class="border px-4 py-2">{ strconv.Itoa(item.Year) }</td>
+    <td class="border px-4 py-2">{ fmt.Sprintf("$%.2f", item.Dividend) }</td>
+</tr>
+}
+}
