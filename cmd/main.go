@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	_ "github.com/glebarez/go-sqlite"
+
+	_ "github.com/jhalmu/go-stock/database/country"
 )
 
 func main() {
@@ -24,7 +26,7 @@ func main() {
 	}
 
 	// read the CSV file
-	countries, err := ReadCSV("countries.csv")
+	countries, err := ReaßdCSV("countries.csv")
 	if err != nil {
 		fmt.Println(err)
 		return
