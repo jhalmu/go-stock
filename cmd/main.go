@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	_ "github.com/glebarez/go-sqlite"
-	_ "github.com/jhalmu/go-stock/database/country"
+	"github.com/jhalmu/go-stock/database"
 )
 
 func main() {
@@ -16,16 +16,17 @@ func main() {
 		return
 	}
 	defer db.Close()
+	_ = db.QueryRow("select sqlite_version()")
 
 	// create the countries table
-	_, err = country.CreateTable(db)
+	_, err = database.CreateTable(db)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	// read the CSV file
-	countries, err := country.ReadCSV("countries.csv")
+	countries, err := database.ReadCSV("./data/countries.csv")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -33,7 +34,7 @@ func main() {
 
 	// insert the data into the SQLite database
 	for _, country := range countries {
-		_, err := country.Insert(db, &country)
+		_, err := database.Insert(db, &country)
 		if err != nil {
 			fmt.Println(err)
 			break
